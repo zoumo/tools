@@ -52,6 +52,16 @@ func newModuleResolver(e *ProcessEnv) *ModuleResolver {
 	return r
 }
 
+func (r *ModuleResolver) LocalPrefix() string {
+	if err := r.init(); err != nil {
+		return ""
+	}
+	if r.main == nil {
+		return ""
+	}
+	return r.main.Path
+}
+
 func (r *ModuleResolver) init() error {
 	if r.initialized {
 		return nil

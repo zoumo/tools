@@ -991,6 +991,8 @@ func addStdlibCandidates(pass *pass, refs references) error {
 
 // A Resolver does the build-system-specific parts of goimports.
 type Resolver interface {
+	LocalPrefix() string
+
 	// loadPackageNames loads the package names in importPaths.
 	loadPackageNames(importPaths []string, srcDir string) (map[string]string, error)
 	// scan works with callback to search for packages. See scanCallback for details.
@@ -1000,7 +1002,6 @@ type Resolver interface {
 	loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []string, error)
 	// scoreImportPath returns the relevance for an import path.
 	scoreImportPath(ctx context.Context, path string) float64
-
 	ClearForNewScan()
 }
 
@@ -1179,6 +1180,20 @@ func (r *gopathResolver) ClearForNewScan() {
 	}
 	r.walked = false
 	r.scanSema <- struct{}{}
+}
+
+func (r *gopathResolver) LocalPrefix() string {
+	envs, err := r.env.goEnv()
+	if err != nil {
+		return ""
+	}
+	for _, p := range filepath.SplitList(envs["GOPATH"]) {
+		gopathPrefix := filepath.Join(p, "src") + "/"
+		if strings.HasPrefix(r.env.WorkingDir, gopathPrefix) {
+			return strings.TrimPrefix(r.env.WorkingDir, gopathPrefix)
+		}
+	}
+	return ""
 }
 
 func (r *gopathResolver) loadPackageNames(importPaths []string, srcDir string) (map[string]string, error) {

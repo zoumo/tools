@@ -7,6 +7,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -90,6 +91,16 @@ func (s *importsState) runProcessEnvFunc(ctx context.Context, snapshot *snapshot
 		s.cleanupProcessEnv, err = s.populateProcessEnv(ctx, snapshot)
 		if err != nil {
 			return err
+		}
+	}
+
+	// Run the user function.
+	if localPrefix == "" {
+		resolver, _ := s.processEnv.GetResolver()
+		if os.Getenv("GOIMPORTLOCAL") != "" {
+			localPrefix = os.Getenv("GOIMPORTLOCAL")
+		} else if os.Getenv("GOIMPORTSTYLE") == "auto" {
+			localPrefix = resolver.LocalPrefix()
 		}
 	}
 
