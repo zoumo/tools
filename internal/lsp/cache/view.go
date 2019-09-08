@@ -439,6 +439,15 @@ func (v *View) RunProcessEnvFunc(ctx context.Context, fn func(*imports.Options) 
 	}
 
 	// Run the user function.
+	if localPrefix == "" {
+		resolver, _ := v.processEnv.GetResolver()
+		if os.Getenv("GOIMPORTLOCAL") != "" {
+			localPrefix = os.Getenv("GOIMPORTLOCAL")
+		} else if os.Getenv("GOIMPORTSTYLE") == "auto" {
+			localPrefix = resolver.LocalPrefix()
+		}
+	}
+
 	opts := &imports.Options{
 		// Defaults.
 		AllErrors:   true,

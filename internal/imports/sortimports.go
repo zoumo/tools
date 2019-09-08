@@ -9,6 +9,7 @@ package imports
 import (
 	"go/ast"
 	"go/token"
+	"os"
 	"sort"
 	"strconv"
 )
@@ -37,11 +38,13 @@ func sortImports(localPrefix string, fset *token.FileSet, f *ast.File) {
 		// Identify and sort runs of specs on successive lines.
 		i := 0
 		specs := d.Specs[:0]
-		for j, s := range d.Specs {
-			if j > i && fset.Position(s.Pos()).Line > 1+fset.Position(d.Specs[j-1].End()).Line {
-				// j begins a new run.  End this one.
-				specs = append(specs, sortSpecs(localPrefix, fset, f, d.Specs[i:j])...)
-				i = j
+		if os.Getenv("GOIMPORTSTYLE") == "auto" {
+			for j, s := range d.Specs {
+				if j > i && fset.Position(s.Pos()).Line > 1+fset.Position(d.Specs[j-1].End()).Line {
+					// j begins a new run.  End this one.
+					specs = append(specs, sortSpecs(localPrefix, fset, f, d.Specs[i:j])...)
+					i = j
+				}
 			}
 		}
 		specs = append(specs, sortSpecs(localPrefix, fset, f, d.Specs[i:])...)
