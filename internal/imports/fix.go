@@ -34,7 +34,15 @@ import (
 var importToGroup = []func(env *ProcessEnv, importPath string) (num int, ok bool){
 	func(env *ProcessEnv, importPath string) (num int, ok bool) {
 		if env.LocalPrefix == "" {
-			return
+			// try to resolve local
+			if env.GOIMPORTLOCAL != "" {
+				env.LocalPrefix = env.GOIMPORTLOCAL
+			} else if env.GOIMPORTSTYLE == "auto" {
+				env.LocalPrefix = env.GetResolver().LocalPrefix()
+			}
+			if env.LocalPrefix == "" {
+				return
+			}
 		}
 		for _, p := range strings.Split(env.LocalPrefix, ",") {
 			if strings.HasPrefix(importPath, p) || strings.TrimSuffix(p, "/") == importPath {
@@ -754,6 +762,7 @@ type ProcessEnv struct {
 	// If non-empty, these will be used instead of the
 	// process-wide values.
 	GOPATH, GOROOT, GO111MODULE, GOPROXY, GOFLAGS, GOSUMDB string
+	GOIMPORTSTYLE, GOIMPORTLOCAL                           string
 	WorkingDir                                             string
 
 	// If Logf is non-nil, debug logging is enabled through this function.
@@ -782,6 +791,8 @@ func (e *ProcessEnv) env() []string {
 	add("GOPROXY", e.GOPROXY)
 	add("GOFLAGS", e.GOFLAGS)
 	add("GOSUMDB", e.GOSUMDB)
+	add("GOIMPORTSTYLE", e.GOIMPORTSTYLE)
+	add("GOIMPORTLOCAL", e.GOIMPORTLOCAL)
 	if e.WorkingDir != "" {
 		add("PWD", e.WorkingDir)
 	}
@@ -872,7 +883,7 @@ type Resolver interface {
 	loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []string, error)
 	// scoreImportPath returns the relevance for an import path.
 	scoreImportPath(ctx context.Context, path string) int
-
+	LocalPrefix() string
 	ClearForNewScan()
 }
 
@@ -1048,6 +1059,16 @@ func (r *gopathResolver) ClearForNewScan() {
 	}
 	r.walked = false
 	r.scanSema <- struct{}{}
+}
+
+func (r *gopathResolver) LocalPrefix() string {
+	for _, p := range filepath.SplitList(r.env.GOPATH) {
+		gopathPrefix := filepath.Join(p, "src") + "/"
+		if strings.HasPrefix(r.env.WorkingDir, gopathPrefix) {
+			return strings.TrimPrefix(r.env.WorkingDir, gopathPrefix)
+		}
+	}
+	return ""
 }
 
 func (r *gopathResolver) loadPackageNames(importPaths []string, srcDir string) (map[string]string, error) {

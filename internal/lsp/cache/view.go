@@ -304,6 +304,8 @@ func (v *view) RunProcessEnvFunc(ctx context.Context, fn func(*imports.Options) 
 		}
 	}
 
+	// log.Print(ctx, "local", tag.Of("env", v.processEnv), tag.Of("resolver", spew.Sdump(v.processEnv.GetResolver())), tag.Of("local prefix", v.processEnv.GetResolver().LocalPrefix()))
+
 	// Run the user function.
 	opts := &imports.Options{
 		// Defaults.
@@ -386,6 +388,10 @@ func (v *view) buildProcessEnv(ctx context.Context) (*imports.ProcessEnv, error)
 			processEnv.GOFLAGS = split[1]
 		case "GOSUMDB":
 			processEnv.GOSUMDB = split[1]
+		case "GOIMPORTSTYLE":
+			processEnv.GOIMPORTSTYLE = split[1]
+		case "GOIMPORTLOCAL":
+			processEnv.GOIMPORTLOCAL = split[1]
 		}
 	}
 	return processEnv, nil
