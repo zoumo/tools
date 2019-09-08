@@ -986,7 +986,7 @@ type Resolver interface {
 	loadExports(ctx context.Context, pkg *pkg, includeTest bool) (string, []string, error)
 	// scoreImportPath returns the relevance for an import path.
 	scoreImportPath(ctx context.Context, path string) int
-
+	LocalPrefix() string
 	ClearForNewScan()
 }
 
@@ -1165,6 +1165,20 @@ func (r *gopathResolver) ClearForNewScan() {
 	}
 	r.walked = false
 	r.scanSema <- struct{}{}
+}
+
+func (r *gopathResolver) LocalPrefix() string {
+	envs, err := r.env.goEnv()
+	if err != nil {
+		return ""
+	}
+	for _, p := range filepath.SplitList(envs["GOPATH"]) {
+		gopathPrefix := filepath.Join(p, "src") + "/"
+		if strings.HasPrefix(r.env.WorkingDir, gopathPrefix) {
+			return strings.TrimPrefix(r.env.WorkingDir, gopathPrefix)
+		}
+	}
+	return ""
 }
 
 func (r *gopathResolver) loadPackageNames(importPaths []string, srcDir string) (map[string]string, error) {
